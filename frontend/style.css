@@ -1,0 +1,325 @@
+/* style.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --green-dark: #0D3B35;
+  --green-light: #2E8B57;
+  --white: #FFFFFF;
+  --gray-bg: #F8F9FA;
+  --gray-text: #6C757D;
+  --border: #E0E0E0;
+}
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--white);
+  color: #333;
+  line-height: 1.5;
+  padding-bottom: 72px; /* высота bottom-nav */
+}
+
+/* Стили экранов */
+.screen {
+  display: none;
+  padding: 20px 16px;
+  max-width: 500px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease;
+}
+
+.screen.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Шапка / профиль */
+.header {
+  margin-bottom: 24px;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--green-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.points {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--green-dark);
+}
+.points span {
+  font-weight: 400;
+  color: var(--gray-text);
+  font-size: 14px;
+}
+
+.level {
+  font-size: 14px;
+  color: var(--green-light);
+}
+
+/* Общие стили текста */
+h1, h2, h3 {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+h1 { font-size: 28px; margin-bottom: 4px; }
+h2 { font-size: 24px; margin: 16px 0 12px; }
+h3 { font-size: 18px; }
+
+.subtitle, p, label {
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 12px;
+}
+
+.logo {
+  text-align: center;
+  margin: 40px 0;
+}
+.logo h1 {
+  margin-top: 16px;
+}
+
+.hint {
+  font-size: 14px;
+  color: var(--gray-text);
+  text-align: center;
+  margin-top: 24px;
+}
+
+/* Формы */
+input, select, button {
+  appearance: none;
+  border: none;
+  outline: none;
+}
+
+input, select {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+.checkbox-label input {
+  margin-top: 4px;
+  width: auto;
+}
+
+/* Кнопки */
+.btn-primary {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  background-color: var(--green-dark);
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary:hover {
+  background-color: #0a2f2a;
+}
+
+.btn-outline {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: 2px solid var(--green-dark);
+  color: var(--green-dark);
+  font-weight: 500;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.btn-outline:hover {
+  background-color: #f0f8f7;
+}
+.btn-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-text {
+  background: none;
+  color: var(--green-dark);
+  font-weight: 500;
+  margin-top: 16px;
+  text-align: center;
+}
+.btn-text:hover {
+  text-decoration: underline;
+}
+
+/* Карточки заданий */
+.quests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quest-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+
+.quest-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #E8F5F2;
+  color: var(--green-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.quest-info {
+  flex: 1;
+}
+.quest-info p {
+  font-size: 14px;
+  color: var(--gray-text);
+  margin: 4px 0 8px;
+}
+
+.reward {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.btn-quest {
+  background: var(--green-light);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Магазин призов */
+.rewards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.reward-item {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+}
+
+.reward-img {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.price {
+  font-weight: 700;
+  color: var(--green-dark);
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+/* Нижнее меню навигации */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  z-index: 100;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #888;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.nav-item.active {
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+/* Экран успеха */
+.checkmark {
+  font-size: 64px;
+  color: var(--green-dark);
+  text-align: center;
+  margin: 32px 0 24px;
+}
+
+/* Адаптив */
+@media (max-width: 375px) {
+  .screen { padding: 16px 12px; }
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  .quest-card { padding: 14px; }
+}
+
+/* Скрыть профиль-экран (заглушка) */
+#screen-profile {
+  text-align: center;
+  padding: 40px 16px;
+}
+#screen-profile::before {
+  content: "🛠 Профиль в разработке";
+  display: block;
+  font-size: 18px;
+  color: var(--gray-text);
+}

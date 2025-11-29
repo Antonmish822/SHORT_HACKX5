@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Умная стена X5 Tech</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Стартовый экран: QR → вход -->
+  <section id="screen-start" class="screen active">
+    <div class="logo">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="20" fill="#0D3B35"/>
+        <text x="24" y="29" text-anchor="middle" fill="white" font-size="16" font-family="Roboto">X5</text>
+      </svg>
+      <h1>Умная стена</h1>
+    </div>
+    <p class="subtitle">Сканируйте QR-код и получайте баллы за задания!</p>
+    <button id="btn-start" class="btn-primary">Начать</button>
+    <p class="hint">*Авторизация через email или Telegram займет <strong>30 секунд</strong></p>
+  </section>
+
+  <!-- Экран авторизации -->
+  <section id="screen-auth" class="screen">
+    <h2>Добро пожаловать!</h2>
+    <p>Оставьте email или Telegram — и вы получите стикер X5 Tech 🎁</p>
+    <form id="auth-form">
+      <label for="contact">Email или @username Telegram</label>
+      <input type="text" id="contact" placeholder="ivan@example.com или @ivan" required>
+      
+      <label class="checkbox-label">
+        <input type="checkbox" id="consent" required>
+        Согласен на обработку данных и получение информации о стажировках
+      </label>
+
+      <button type="submit" class="btn-primary">Получить доступ</button>
+    </form>
+  </section>
+
+  <!-- Главный экран: список заданий -->
+  <section id="screen-quests" class="screen">
+    <header class="header">
+      <div class="profile">
+        <div class="avatar">👤</div>
+        <div>
+          <div class="points">120 <span>баллов</span></div>
+          <div class="level">Гуру</div>
+        </div>
+      </div>
+    </header>
+
+    <h2>Доступные задания</h2>
+
+    <div class="quests-list">
+      <div class="quest-card" data-type="quiz">
+        <div class="quest-icon">❓</div>
+        <div class="quest-info">
+          <h3>Квиз по X5 Tech</h3>
+          <p>5 вопросов про технологии и продукты</p>
+          <span class="reward">+30 баллов</span>
+        </div>
+        <button class="btn-quest">Начать</button>
+      </div>
+
+      <div class="quest-card" data-type="photo">
+        <div class="quest-icon">📸</div>
+        <div class="quest-info">
+          <h3>Фото с хештегом</h3>
+          <p>Сфоткайтесь у стенда и добавьте #X5TechCampus</p>
+          <span class="reward">+25 баллов</span>
+        </div>
+        <button class="btn-quest">Выполнить</button>
+      </div>
+
+      <div class="quest-card" data-type="qr">
+        <div class="quest-icon">🔍</div>
+        <div class="quest-info">
+          <h3>Поиск QR-меток</h3>
+          <p>Найдите 3 скрытых QR на стенде</p>
+          <span class="reward">+40 баллов</span>
+        </div>
+        <button class="btn-quest">Искать</button>
+      </div>
+
+      <div class="quest-card" data-type="roleplay">
+        <div class="quest-icon">🎭</div>
+        <div class="quest-info">
+          <h3>Ролевая игра</h3>
+          <p>Станьте Data Engineer на 5 минут</p>
+          <span class="reward">+50 баллов</span>
+        </div>
+        <button class="btn-quest">Играть</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Экран магазина призов -->
+  <section id="screen-shop" class="screen">
+    <h2>Магазин призов</h2>
+    <div class="rewards-grid">
+      <div class="reward-item">
+        <div class="reward-img">🎁</div>
+        <h3>Стикерпак X5</h3>
+        <p>Стильные стикеры в Telegram</p>
+        <div class="price">25 баллов</div>
+        <button class="btn-outline">Обменять</button>
+      </div>
+      <div class="reward-item">
+        <div class="reward-img">👕</div>
+        <h3>Футболка</h3>
+        <p>Ограниченный тираж</p>
+        <div class="price">100 баллов</div>
+        <button class="btn-outline">Обменять</button>
+      </div>
+      <div class="reward-item">
+        <div class="reward-img">🎧</div>
+        <h3>PowerBank</h3>
+        <p>С логотипом X5 Tech</p>
+        <div class="price">200 баллов</div>
+        <button class="btn-outline" disabled>Недоступно</button>
+      </div>
+    </div>
+    <button id="btn-back-quests" class="btn-text">← Вернуться к заданиям</button>
+  </section>
+
+  <!-- Экран контактов / стажировка -->
+  <section id="screen-lead" class="screen">
+    <h2>Хотите в стажировку X5 Tech?</h2>
+    <p>Оставьте email и интерес — и мы пришлём приглашение на отбор.</p>
+    <form id="lead-form">
+      <label>Email (если не указан)</label>
+      <input type="email" placeholder="ivan@example.com">
+
+      <label>Направление</label>
+      <select required>
+        <option value="">— Выберите —</option>
+        <option>Разработка (Frontend/Backend)</option>
+        <option>Data Science / ML</option>
+        <option>Product Management</option>
+        <option>DevOps / SRE</option>
+        <option>QA / Тестирование</option>
+      </select>
+
+      <button type="submit" class="btn-primary">Отправить</button>
+      <button type="button" class="btn-text" id="btn-skip-lead">Пропустить</button>
+    </form>
+  </section>
+
+  <!-- Экран успеха -->
+  <section id="screen-success" class="screen">
+    <div class="checkmark">✅</div>
+    <h2>Поздравляем!</h2>
+    <p>Вы выполнили задание и получили <strong>+30 баллов</strong>.</p>
+    <button id="btn-next-quest" class="btn-primary">Продолжить</button>
+    <button id="btn-go-shop" class="btn-outline">Магазин призов</button>
+  </section>
+
+  <!-- Навигация (нижнее меню) -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-screen="quests">🏠 Главная</button>
+    <button class="nav-item" data-screen="shop">🎁 Призы</button>
+    <button class="nav-item" data-screen="lead">💼 Стажировка</button>
+    <button class="nav-item" data-screen="profile">👤 Профиль</button>
+  </nav>
+
+  <script src="script.js"></script>
+</body>
+</html>
