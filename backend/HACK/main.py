@@ -1,18 +1,25 @@
 # main.py
 from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from typing import List
-import crud
 import models
+from fastapi.security import OAuth2PasswordBearer
+from typing import List, Optional
+import json
+
 from database import SessionLocal, engine
+from models import User, Quest, QuestSubmission
 from schemas import (
     UserCreate, UserLogin, Token, UserProfile,
     QuestOut, QuestSubmissionBase, QuestSubmissionOut, QuestBase
 )
-from auth import hash_password, verify_password, create_access_token, get_user_id_from_token
+from auth import (
+    verify_password, get_password_hash,
+    create_access_token, SECRET_KEY, ALGORITHM
+)
+from jose import jwt, JWTError
 
-# Создаем таблицы
+# Создаём таблицы при запуске
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -21,11 +28,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# OAuth2 схема
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-
-# Dependency для БД
+# Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -33,195 +36,157 @@ def get_db():
     finally:
         db.close()
 
-
-# Dependency для получения текущего пользователя
-async def get_current_user(
-        token: str = Depends(oauth2_scheme),
-        db: Session = Depends(get_db)
-):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Неверные учетные данные",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    user_id = get_user_id_from_token(token)
-    if user_id is None:
-        raise credentials_exception
-
-    user = crud.get_user_by_id(db, user_id)
-    if user is None:
-        raise credentials_exception
-
-    return user
-
-
 # === Аутентификация ===
 
 @app.post("/auth/register", response_model=Token, status_code=201)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    # Проверяем согласие
-    if not user_data.consent_given:
-        raise HTTPException(
-            status_code=400,
-            detail="Необходимо дать согласие на обработку персональных данных"
-        )
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    # Проверка уникальности contact
+    db_user = db.query(User).filter(User.contact == user.contact).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Пользователь с таким контактом уже существует")
 
-    # Проверяем уникальность контакта
-    if crud.get_user_by_contact(db, user_data.contact):
-        raise HTTPException(
-            status_code=400,
-            detail="Пользователь с таким контактом уже существует"
-        )
+    # Хешируем пароль, если указан
+    hashed_pw = get_password_hash(user.password) if user.password else None
 
-    # Валидация типа пользователя и пароля
-    is_telegram = user_data.contact.startswith("@")
+    db_user = User(
+        contact=user.contact,
+        hashed_password=hashed_pw,
+        consent_given=user.consent_given,
+        points=0,
+        level="Новичок"
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
 
-    if not is_telegram and not user_data.password:
-        raise HTTPException(
-            status_code=400,
-            detail="Для email-регистрации пароль обязателен"
-        )
-
-    if is_telegram and user_data.password:
-        raise HTTPException(
-            status_code=400,
-            detail="Для Telegram-регистрации пароль не требуется"
-        )
-
-    # Создаем пользователя
-    user = crud.create_user(db, user_data)
-
-    # Создаем токен
-    access_token = create_access_token(data={"sub": str(user.id)})
-
+    access_token = create_access_token(data={"sub": str(db_user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.post("/auth/login", response_model=Token)
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
-    user = crud.get_user_by_contact(db, user_data.contact)
-    if not user:
-        raise HTTPException(
-            status_code=400,
-            detail="Неверный контакт или пароль"
-        )
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.contact == user.contact).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="Неверный контакт или пароль")
 
-    is_telegram = user_data.contact.startswith("@")
+    # Если пароль требуется (не Telegram-вход)
+    if db_user.hashed_password:
+        if not user.password or not verify_password(user.password, db_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Неверный контакт или пароль")
+    # Для Telegram: достаточно совпадения contact (в реальности — проверка через Bot API)
 
-    if is_telegram:
-        # Telegram вход - только проверка существования пользователя
-        pass
-    else:
-        # Email вход - проверка пароля
-        if not user.hashed_password:
-            raise HTTPException(
-                status_code=400,
-                detail="Для этого пользователя не установлен пароль"
-            )
-
-        if not user_data.password or not verify_password(user_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=400,
-                detail="Неверный пароль"
-            )
-
-    # Создаем токен
-    access_token = create_access_token(data={"sub": str(user.id)})
-
+    access_token = create_access_token(data={"sub": str(db_user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# === Профиль ===
+def get_current_user(
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl="auth/login")),
+    db: Session = Depends(get_db)
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Не удалось проверить учетные данные",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+# === Профиль и статистика ===
 
 @app.get("/me", response_model=UserProfile)
-def get_my_profile(current_user: models.User = Depends(get_current_user)):
-    completed_quests = len([s for s in current_user.submissions if s.status == "completed"])
-
-    return UserProfile(
-        id=current_user.id,
-        contact=current_user.contact,
-        points=current_user.points,
-        level=current_user.level,
-        interests=current_user.interests,
-        completed_quests=completed_quests
-    )
+def read_users_me(current_user: User = Depends(get_current_user)):
+    completed = len(current_user.submissions)
+    return {
+        "id": current_user.id,
+        "contact": current_user.contact,
+        "points": current_user.points,
+        "level": current_user.level,
+        "interests": current_user.interests,
+        "completed_quests": completed
+    }
 
 
 @app.put("/me/interests")
-def update_my_interests(
-        interests: str,
-        current_user: models.User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+def update_interests(
+    interests: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     current_user.interests = interests
     db.commit()
     return {"status": "ok"}
 
 
-# === Задания ===
+# === Задания (quests) ===
 
 @app.get("/quests/", response_model=List[QuestOut])
-def get_all_quests(db: Session = Depends(get_db)):
-    return crud.get_all_quests(db)
+def get_quests(db: Session = Depends(get_db)):
+    return db.query(Quest).all()
 
 
 @app.post("/quests/{quest_id}/submit", response_model=QuestSubmissionOut)
 def submit_quest(
-        quest_id: int,
-        submission_data: QuestSubmissionBase,
-        current_user: models.User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+    quest_id: int,
+    submission: QuestSubmissionBase,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Проверяем существование задания
-    quest = crud.get_quest_by_id(db, quest_id)
+    quest = db.query(Quest).filter(Quest.id == quest_id).first()
     if not quest:
         raise HTTPException(status_code=404, detail="Задание не найдено")
 
-    # Проверяем, не выполнял ли пользователь уже это задание
-    existing_submission = crud.get_user_quest_submission(db, current_user.id, quest_id)
-    if existing_submission:
+    # Проверка, не выполнял ли уже
+    existing = db.query(QuestSubmission).filter(
+        QuestSubmission.user_id == current_user.id,
+        QuestSubmission.quest_id == quest_id
+    ).first()
+    if existing:
         raise HTTPException(status_code=400, detail="Задание уже выполнено")
 
-    # Создаем submission и начисляем баллы
-    submission = crud.create_quest_submission(
-        db, current_user, quest, submission_data
+    # Начисляем баллы
+    current_user.points += quest.reward_points
+
+    # Обновляем уровень (упрощённо)
+    if current_user.points >= 200:
+        current_user.level = "Гуру"
+    elif current_user.points >= 100:
+        current_user.level = "Эксперт"
+
+    # Создаём запись
+    new_sub = QuestSubmission(
+        user_id=current_user.id,
+        quest_id=quest_id,
+        status=submission.status,
+        metadata_json=submission.metadata_json
     )
+    db.add(new_sub)
+    db.commit()
+    db.refresh(new_sub)
 
-    return submission
+    return new_sub
 
 
-# === Админка ===
+# === Админка (для менеджеров X5 Tech) ===
 
 @app.post("/admin/quests", response_model=QuestOut, status_code=201)
-def create_new_quest(quest_data: QuestBase, db: Session = Depends(get_db)):
-    return crud.create_quest(db, quest_data)
+def create_quest(
+    quest: QuestBase,
+    db: Session = Depends(get_db)
+):
+    db_quest = Quest(**quest.dict())
+    db.add(db_quest)
+    db.commit()
+    db.refresh(db_quest)
+    return db_quest
 
-
-@app.get("/admin/users", response_model=List[UserProfile])
-def get_all_users(db: Session = Depends(get_db)):
-    users = crud.get_all_users(db)
-    result = []
-
-    for user in users:
-        completed_quests = len([s for s in user.submissions if s.status == "completed"])
-        result.append(UserProfile(
-            id=user.id,
-            contact=user.contact,
-            points=user.points,
-            level=user.level,
-            interests=user.interests,
-            completed_quests=completed_quests
-        ))
-
-    return result
-
-
-# Корневой endpoint
-@app.get("/")
-def root():
-    return {
-        "message": "Smart Wall API — X5 Tech",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+# Запуск: uvicorn main:app --reload --port 8000
