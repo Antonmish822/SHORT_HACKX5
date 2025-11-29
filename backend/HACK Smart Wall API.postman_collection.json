@@ -1,0 +1,243 @@
+{
+	"info": {
+		"_postman_id": "smart-wall-x5-tech",
+		"name": "HACK Smart Wall API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"description": "API для регистрации, авторизации и учёта прогресса на умной стене X5 Tech"
+	},
+	"item": [
+		{
+			"name": "Аутентификация",
+			"item": [
+				{
+					"name": "Регистрация пользователя",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"contact\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"consent_given\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": "{{base_url}}",
+							"path": ["auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Вход в систему",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"contact\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": "{{base_url}}",
+							"path": ["auth", "login"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Профиль",
+			"item": [
+				{
+					"name": "Получить информацию о пользователе",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/me",
+							"host": "{{base_url}}",
+							"path": ["me"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Обновить интересы пользователя",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"interests\": \"Data Science,Python,Machine Learning\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/me/interests",
+							"host": "{{base_url}}",
+							"path": ["me", "interests"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Задания",
+			"item": [
+				{
+					"name": "Получить список заданий",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/quests/",
+							"host": "{{base_url}}",
+							"path": ["quests", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Отправить решение задания",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quest_id\": 1,\n  \"status\": \"completed\",\n  \"metadata_json\": \"{\\\"answer\\\": \\\"Some answer\\\"}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/quests/1/submit",
+							"host": "{{base_url}}",
+							"path": ["quests", "1", "submit"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Администрирование",
+			"item": [
+				{
+					"name": "Создать новое задание",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Новое задание\",\n  \"description\": \"Описание нового задания\",\n  \"reward_points\": 50,\n  \"quest_type\": \"quiz\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/quests",
+							"host": "{{base_url}}",
+							"path": ["admin", "quests"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
