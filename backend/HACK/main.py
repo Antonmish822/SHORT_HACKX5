@@ -1,6 +1,7 @@
 # main.py
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.openapi.utils import get_openapi
 from sqlalchemy.orm import Session
 import models
 from fastapi.security import OAuth2PasswordBearer
@@ -22,11 +23,69 @@ from jose import jwt, JWTError
 # Создаём таблицы при запуске
 models.Base.metadata.create_all(bind=engine)
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
 app = FastAPI(
     title="Smart Wall API — X5 Tech",
     description="API для регистрации, авторизации и учёта прогресса на умной стене",
-    version="1.0.0"
+    version="1.0.0",
+    contact={
+        "name": "X5 Tech Team",
+        "url": "https://github.com/x5-tech",
+        "email": "tech@x5.ru"
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT"
+    },
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "Аутентификация",
+            "description": "Операции регистрации и входа в систему"
+        },
+        {
+            "name": "Профиль",
+            "description": "Управление профилем пользователя"
+        },
+        {
+            "name": "Задания",
+            "description": "Работа с заданиями и их выполнение"
+        },
+        {
+            "name": "Администрирование",
+            "description": "Управление контентом (только для администраторов)"
+        }
+    ],
+    swagger_ui_parameters={
+        "deepLinking": False,
+        "defaultModelsExpandDepth": -1
+    }
 )
+
+# Настраиваем security scheme для OpenAPI
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    openapi_schema["components"] = openapi_schema.get("components", {})
+    openapi_schema["components"]["securitySchemes"] = {
+        "OAuth2PasswordBearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # Dependency
 def get_db():
@@ -38,8 +97,16 @@ def get_db():
 
 # === Аутентификация ===
 
-@app.post("/auth/register", response_model=Token, status_code=201)
+@app.post("/auth/register", response_model=Token, status_code=201, tags=["Аутентификация"])
 def register(user: UserCreate, db: Session = Depends(get_db)):
+    """
+    Регистрация нового пользователя
+    
+    Параметры:
+    - contact: email или @username Telegram
+    - password: пароль (необязательно для Telegram)
+    - consent_given: согласие на обработку данных
+    """
     # Проверка уникальности contact
     db_user = db.query(User).filter(User.contact == user.contact).first()
     if db_user:
@@ -63,8 +130,15 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.post("/auth/login", response_model=Token)
+@app.post("/auth/login", response_model=Token, tags=["Аутентификация"])
 def login(user: UserLogin, db: Session = Depends(get_db)):
+    """
+    Вход в систему
+    
+    Параметры:
+    - contact: email или @username Telegram
+    - password: пароль (необязательно для Telegram)
+    """
     db_user = db.query(User).filter(User.contact == user.contact).first()
     if not db_user:
         raise HTTPException(status_code=400, detail="Неверный контакт или пароль")
@@ -80,7 +154,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
 
 def get_current_user(
-    token: str = Depends(OAuth2PasswordBearer(tokenUrl="auth/login")),
+    token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
@@ -103,8 +177,13 @@ def get_current_user(
 
 # === Профиль и статистика ===
 
-@app.get("/me", response_model=UserProfile)
+@app.get("/me", response_model=UserProfile, tags=["Профиль"])
 def read_users_me(current_user: User = Depends(get_current_user)):
+    """
+    Получить информацию о текущем пользователе
+    
+    Требует аутентификации через Bearer токен
+    """
     completed = len(current_user.submissions)
     return {
         "id": current_user.id,
@@ -116,12 +195,20 @@ def read_users_me(current_user: User = Depends(get_current_user)):
     }
 
 
-@app.put("/me/interests")
+@app.put("/me/interests", tags=["Профиль"])
 def update_interests(
     interests: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Обновить интересы пользователя
+    
+    Требует аутентификации через Bearer токен
+    
+    Параметры:
+    - interests: строка с интересами пользователя
+    """
     current_user.interests = interests
     db.commit()
     return {"status": "ok"}
@@ -129,18 +216,26 @@ def update_interests(
 
 # === Задания (quests) ===
 
-@app.get("/quests/", response_model=List[QuestOut])
+@app.get("/quests/", response_model=List[QuestOut], tags=["Задания"])
 def get_quests(db: Session = Depends(get_db)):
+    """
+    Получить список всех доступных заданий
+    """
     return db.query(Quest).all()
 
 
-@app.post("/quests/{quest_id}/submit", response_model=QuestSubmissionOut)
+@app.post("/quests/{quest_id}/submit", response_model=QuestSubmissionOut, tags=["Задания"])
 def submit_quest(
     quest_id: int,
     submission: QuestSubmissionBase,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Отправить решение задания
+    
+    Требует аутентификации через Bearer токен
+    """
     quest = db.query(Quest).filter(Quest.id == quest_id).first()
     if not quest:
         raise HTTPException(status_code=404, detail="Задание не найдено")
@@ -178,11 +273,14 @@ def submit_quest(
 
 # === Админка (для менеджеров X5 Tech) ===
 
-@app.post("/admin/quests", response_model=QuestOut, status_code=201)
+@app.post("/admin/quests", response_model=QuestOut, status_code=201, tags=["Администрирование"])
 def create_quest(
     quest: QuestBase,
     db: Session = Depends(get_db)
 ):
+    """
+    Создать новое задание (только для администраторов)
+    """
     db_quest = Quest(**quest.dict())
     db.add(db_quest)
     db.commit()
